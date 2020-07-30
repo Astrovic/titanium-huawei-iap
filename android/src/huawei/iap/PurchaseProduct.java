@@ -1,8 +1,10 @@
 package huawei.iap;
 
 import android.app.Activity;
+import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.IntentSender;
+import android.util.Log;
 
 import com.huawei.hmf.tasks.Task;
 import com.huawei.hms.iap.Iap;
@@ -18,15 +20,21 @@ import org.appcelerator.kroll.KrollFunction;
 import org.appcelerator.kroll.KrollObject;
 import org.appcelerator.titanium.TiApplication;
 import org.appcelerator.titanium.util.TiActivityResultHandler;
+import org.appcelerator.titanium.util.TiActivitySupport;
+
+import java.lang.reflect.Field;
 
 import huawei.iap.common.CipherUtil;
 import huawei.iap.common.StatusHandler;
+import huawei.iap.hacker.Hack;
 import huawei.iap.helper.Defaults;
+import ti.modules.titanium.ui.ScrollableViewProxy;
 
 import static huawei.iap.helper.Defaults.REQ_CODE_BUY;
 
 
 public class PurchaseProduct implements TiActivityResultHandler {
+    private static final String TAG = "PurchaseProduct";
     private KrollObject krollObject;
     private KrollFunction callback;
 
@@ -75,6 +83,7 @@ public class PurchaseProduct implements TiActivityResultHandler {
         PurchaseIntentReq purchaseIntentReq = createPurchaseIntentReq(productId, priceType, developerPayload);
 
         IapClient mClient = Iap.getIapClient(TiApplication.getAppCurrentActivity());
+
         Task<PurchaseIntentResult> task = mClient.createPurchaseIntent(purchaseIntentReq);
 
         task.addOnSuccessListener(result -> {
@@ -85,6 +94,7 @@ public class PurchaseProduct implements TiActivityResultHandler {
             }
 
             Status status = result.getStatus();
+
             if (status == null) {
                 onFail("PurchaseIntentResult: status null");
                 return;
@@ -93,7 +103,23 @@ public class PurchaseProduct implements TiActivityResultHandler {
             // you should pull up the page to complete the payment process.
             if (status.hasResolution()) {
                 try {
-                    status.startResolutionForResult(TiApplication.getAppCurrentActivity(), REQ_CODE_BUY);
+                    PendingIntent pendingIntent = Hack.hackPendingIntent(status);
+                    Intent intent = Hack.hackIntent(status);
+                    TiActivitySupport tiActivitySupport = ((TiActivitySupport) TiApplication.getAppCurrentActivity());
+
+                    if (pendingIntent != null) {
+                        Log.i(TAG, "<<< launching from pendingIntent >>>");
+                        tiActivitySupport.launchIntentSenderForResult(pendingIntent.getIntentSender(), REQ_CODE_BUY, (Intent)null, 0, 0, 0, null, this);
+                        Log.i(TAG, "<<< launching from pendingIntent done >>>");
+                    } else if (intent != null) {
+                        Log.i(TAG, "<<< launching from intent >>>");
+                        tiActivitySupport.launchActivityForResult(intent, REQ_CODE_BUY, this);
+                        Log.i(TAG, "<<< launching from intent done >>>");
+                    } else {
+                        Log.i(TAG, "launching normally from IAP SDK");
+                        status.startResolutionForResult(TiApplication.getAppCurrentActivity(), REQ_CODE_BUY);
+                    }
+
                 } catch (IntentSender.SendIntentException exp) {
                     onFail("PurchaseIntentResult: " + exp.toString());
                 }
@@ -107,12 +133,14 @@ public class PurchaseProduct implements TiActivityResultHandler {
     @Override
     public void onResult(Activity activity, int requestCode, int resultCode, Intent data) {
         if (resultCode == Activity.RESULT_CANCELED){
+            Log.i(TAG, "onResult: result cancelled");
             onFail("onResult: result cancelled");
             return;
         }
 
         if (REQ_CODE_BUY == requestCode && resultCode == Activity.RESULT_OK) {
             if (data == null) {
+                Log.i(TAG, "onResult: data null");
                 onFail("onResult: data null");
                 return;
             }
@@ -128,29 +156,40 @@ public class PurchaseProduct implements TiActivityResultHandler {
                     boolean success = CipherUtil.doCheck(inAppPurchaseData, inAppPurchaseDataSignature);
 
                     if (success) {
+                        Log.i(TAG, "Payment successful and product delivered");
                         onSuccess("Payment successful and product delivered", HuaweiIapModule.CODE_PAYMENT_SUCCESS);
                     } else {
+                        Log.i(TAG, "Payment successful but signature failed");
                         onSuccess("Payment successful but signature failed", HuaweiIapModule.CODE_PAYMENT_SUCCESS_SIGNATURE_FAILED);
                     }
 
+                    break;
+
                 case OrderStatusCode.ORDER_STATE_CANCEL:
+                    Log.i(TAG, "onResult: user cancelled the payment");
                     onFail("onResult: user cancelled the payment");
                     break;
 
                 case OrderStatusCode.ORDER_PRODUCT_OWNED:
+                    Log.i(TAG, "You already owned the product");
                     onSuccess("You already owned the product", HuaweiIapModule.CODE_OWNED_PRODUCT);
                     break;
 
                 default:
+                    Log.i(TAG, "onResult: payment failed");
                     onFail("onResult: payment failed");
                     break;
             }
+        } else {
+            Log.i(TAG, "onResult: requestCode or resultCode null");
+            onFail("onResult: requestCode or resultCode null");
         }
     }
 
     @Override
     public void onError(Activity activity, int requestCode, Exception exc) {
-        if (REQ_CODE_BUY == requestCode){
+        if (REQ_CODE_BUY == requestCode) {
+            Log.i(TAG, "onError: unknown error");
             onFail("onError: unknown error");
         }
     }
