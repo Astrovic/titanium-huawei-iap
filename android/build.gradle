@@ -1,0 +1,22 @@
+android {
+	packagingOptions {
+		exclude 'META-INF/*.kotlin_module'
+  	}
+
+	buildTypes {
+		release {
+			minifyEnabled true
+			proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), '../../proguard-rules.pro'
+		}
+	}
+}
+
+repositories {
+	maven {url 'https://developer.huawei.com/repo/'}
+	google()
+	jcenter()
+}
+
+dependencies {
+    implementation 'com.huawei.hms:iap:4.0.4.301'
+}
