@@ -8,7 +8,6 @@ public class Defaults {
     public static final String PROPERTY_SUCCESS = "success";
     public static final String PROPERTY_MESSAGE = "message";
     public static final String PROPERTY_CODE = "code";
-    public static final String PROPERTY_ITEM_LIST = "itemList";
     public static final String PROPERTY_DEVELOPER_PAYLOAD = "developerPayload";
 
     public static class ItemProperty {

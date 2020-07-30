@@ -61,7 +61,7 @@ public class DisplayProducts {
         KrollDict result = new KrollDict();
         result.put(Defaults.PROPERTY_SUCCESS, false);
         result.put(Defaults.PROPERTY_MESSAGE, msg);
-        result.put(Defaults.PROPERTY_ITEM_LIST, new Object[0]);
+        result.put(Defaults.PROPERTY_ITEMS, new Object[0]);
         callback.callAsync(krollObject, result);
     }
 
@@ -98,7 +98,7 @@ public class DisplayProducts {
         KrollDict result = new KrollDict();
         result.put(Defaults.PROPERTY_SUCCESS, true);
         result.put(Defaults.PROPERTY_MESSAGE, "");
-        result.put(Defaults.PROPERTY_ITEM_LIST, items.toArray());
+        result.put(Defaults.PROPERTY_ITEMS, items.toArray());
         callback.callAsync(krollObject, result);
     }
 }
