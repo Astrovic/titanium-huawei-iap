@@ -17,9 +17,9 @@ import org.appcelerator.kroll.KrollFunction;
 import org.appcelerator.kroll.KrollModule;
 import org.appcelerator.kroll.annotations.Kroll;
 import org.appcelerator.titanium.TiApplication;
-import org.appcelerator.titanium.TiC;
 
 import huawei.iap.helper.Defaults;
+import huawei.iap.helper.Utils;
 
 
 @SuppressWarnings("ALL")
@@ -36,6 +36,10 @@ public class HuaweiIapModule extends KrollModule {
 	@Kroll.constant public static final int PRICE_TYPE_CONSUMABLE = IapClient.PriceType.IN_APP_CONSUMABLE;
 	@Kroll.constant public static final int PRICE_TYPE_NON_CONSUMABLE = IapClient.PriceType.IN_APP_NONCONSUMABLE;
 	@Kroll.constant public static final int PRICE_TYPE_SUBSCRIPTION = IapClient.PriceType.IN_APP_SUBSCRIPTION;
+
+	@Kroll.constant public static final int CODE_PAYMENT_SUCCESS = 0;
+	@Kroll.constant public static final int CODE_PAYMENT_SUCCESS_SIGNATURE_FAILED = 1;
+	@Kroll.constant public static final int CODE_OWNED_PRODUCT = 2;
 
 	public HuaweiIapModule() {
 		super();
@@ -68,7 +72,7 @@ public class HuaweiIapModule extends KrollModule {
 			return;
 		}
 
-		if (!params.containsKeyAndNotNull(Defaults.PROPERTY_PRICE_TYPE)) {
+		if (!params.containsKeyAndNotNull(Defaults.ItemProperty.PriceType)) {
 			Log.w(TAG, "price-type not available");
 			return;
 		}
@@ -79,7 +83,7 @@ public class HuaweiIapModule extends KrollModule {
 		}
 
 		Object callback = params.get(Defaults.PROPERTY_CALLBACK);
-		int priceType = (int) params.get(Defaults.PROPERTY_PRICE_TYPE);
+		int priceType = (int) params.get(Defaults.ItemProperty.PriceType);
 		Object[] items = (Object[]) params.get(Defaults.PROPERTY_ITEMS);
 
 		if (callback instanceof KrollFunction == false) {
@@ -88,6 +92,43 @@ public class HuaweiIapModule extends KrollModule {
 		}
 
 		new DisplayProducts(callback, this.getKrollObject()).fetchProductList(priceType, items);
+	}
+
+
+	@Kroll.method
+	public void purchaseItem(@Kroll.argument(optional = false) KrollDict params) {
+		// validate all passed parameters
+		if (params == null) {
+			Log.w(TAG, "parameters not available");
+			return;
+		}
+
+		if (!params.containsKeyAndNotNull(Defaults.PROPERTY_CALLBACK)) {
+			Log.w(TAG, "callback not available");
+			return;
+		}
+
+		if (!params.containsKeyAndNotNull(Defaults.ItemProperty.PriceType)) {
+			Log.w(TAG, "price-type not available");
+			return;
+		}
+
+		if (!params.containsKeyAndNotNull(Defaults.ItemProperty.ProductId)) {
+			Log.w(TAG, "product-id not available");
+			return;
+		}
+
+		Object callback = params.get(Defaults.PROPERTY_CALLBACK);
+		if (callback instanceof KrollFunction == false) {
+			Log.w(TAG, "callback not available");
+			return;
+		}
+
+		int priceType = (int) params.get(Defaults.ItemProperty.PriceType);
+		String productId = (String) params.get(Defaults.ItemProperty.ProductId);
+		String developerPayload = Utils.getStringOptionDefault(params, Defaults.PROPERTY_DEVELOPER_PAYLOAD,"test payload");
+
+		new PurchaseProduct(callback, this.getKrollObject()).initiatePurchase(productId, priceType, developerPayload);
 	}
 }
 

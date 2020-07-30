@@ -1,27 +1,8 @@
 package huawei.iap.helper;
 
-import java.util.HashMap;
-
 import org.appcelerator.kroll.KrollDict;
-import org.appcelerator.kroll.KrollProxy;
-import org.appcelerator.titanium.TiApplication;
-import org.appcelerator.titanium.TiC;
-import org.appcelerator.titanium.proxy.TiViewProxy;
 import org.appcelerator.titanium.util.TiConvert;
 import org.appcelerator.titanium.util.TiRHelper;
-import org.appcelerator.titanium.view.TiDrawableReference;
-import android.content.Context;
-import android.graphics.drawable.Drawable;
-import android.os.Bundle;
-import android.text.Spannable;
-import android.text.method.LinkMovementMethod;
-import android.util.Log;
-import android.view.View;
-import android.widget.TextView;
-
-import ti.modules.titanium.filesystem.FileProxy;
-import ti.modules.titanium.ui.AttributedStringProxy;
-import ti.modules.titanium.ui.UIModule;
 
 
 public class Utils {

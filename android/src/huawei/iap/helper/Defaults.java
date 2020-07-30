@@ -3,12 +3,13 @@ package huawei.iap.helper;
 public class Defaults {
     public static final int REQ_CODE_BUY = 4002;
 
-    public static final String PROPERTY_PRICE_TYPE = "priceType";
     public static final String PROPERTY_ITEMS = "items";
     public static final String PROPERTY_CALLBACK = "callback";
     public static final String PROPERTY_SUCCESS = "success";
     public static final String PROPERTY_MESSAGE = "message";
+    public static final String PROPERTY_CODE = "code";
     public static final String PROPERTY_ITEM_LIST = "itemList";
+    public static final String PROPERTY_DEVELOPER_PAYLOAD = "developerPayload";
 
     public static class ItemProperty {
         public static final String ProductId = "productId";
