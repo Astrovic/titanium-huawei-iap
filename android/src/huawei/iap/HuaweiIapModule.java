@@ -56,7 +56,7 @@ public class HuaweiIapModule extends KrollModule {
 	}
 
 	@Kroll.method
-	public void getItemDetails(KrollDict params) {
+	public void getItemList(@Kroll.argument(optional = false) KrollDict params) {
 		// validate all passed parameters
 		if (params == null) {
 			Log.w(TAG, "parameters not available");
@@ -87,7 +87,7 @@ public class HuaweiIapModule extends KrollModule {
 			return;
 		}
 
-		new DisplayProducts().fetchProductList(priceType, items, (KrollFunction) callback);
+		new DisplayProducts(callback, this.getKrollObject()).fetchProductList(priceType, items);
 	}
 }
 
