@@ -12,6 +12,9 @@ import com.huawei.hmf.tasks.Task;
 import com.huawei.hms.iap.Iap;
 import com.huawei.hms.iap.IapApiException;
 import com.huawei.hms.iap.IapClient;
+import com.huawei.hms.iap.entity.ConsumeOwnedPurchaseReq;
+import com.huawei.hms.iap.entity.ConsumeOwnedPurchaseResult;
+import com.huawei.hms.iap.entity.InAppPurchaseData;
 import com.huawei.hms.iap.entity.OrderStatusCode;
 import com.huawei.hms.iap.entity.PurchaseIntentReq;
 import com.huawei.hms.iap.entity.PurchaseIntentResult;
@@ -22,22 +25,40 @@ import org.appcelerator.kroll.KrollFunction;
 import org.appcelerator.kroll.KrollObject;
 import org.appcelerator.titanium.TiApplication;
 import org.appcelerator.titanium.util.TiActivityResultHandler;
+import org.json.JSONException;
+
+import huawei.iap.common.CipherUtil;
+
+import static huawei.iap.helper.Defaults.REQ_CODE_BUY;
 
 
 public class PurchaseProducts implements TiActivityResultHandler {
     private KrollObject krollObject;
     private KrollFunction callback = null;
 
+    /**
+     * Create a PurchaseIntentReq instance
+     * @param type In-app product type
+     * @param productId ID of the in-app product to be paid, and set during in-app product configuration in AppGallery Connect
+     * @return PurchaseIntentReq
+     */
+    private PurchaseIntentReq createPurchaseIntentReq(int type, String productId) {
+        PurchaseIntentReq req = new PurchaseIntentReq();
+        req.setProductId(productId);
+        req.setPriceType(type);
+        req.setDeveloperPayload("test");
+        return req;
+    }
 
     /**
      * create orders for in-app products in the PMS
-     * @param productId ID list of products to be queried. Each product ID must exist and be unique in the current app.
-     * @param type  In-app product type.
+     * @param productId ID list of products to be queried. Each product ID must exist and be unique in the current app
+     * @param productType  In-app product type
      */
-    private void gotoPay(String productId, int type) {
+    private void gotoPay(String productId, int productType) {
         Log.i(HuaweiIapModule.TAG, "call createPurchaseIntent");
         IapClient mClient = Iap.getIapClient(TiApplication.getAppCurrentActivity());
-        Task<PurchaseIntentResult> task = mClient.createPurchaseIntent(createPurchaseIntentReq(type, productId));
+        Task<PurchaseIntentResult> task = mClient.createPurchaseIntent(createPurchaseIntentReq(productType, productId));
         task.addOnSuccessListener(new OnSuccessListener<PurchaseIntentResult>() {
             @Override
             public void onSuccess(PurchaseIntentResult result) {
@@ -56,7 +77,7 @@ public class PurchaseProducts implements TiActivityResultHandler {
                     try {
                         status.startResolutionForResult(TiApplication.getAppCurrentActivity(), REQ_CODE_BUY);
                     } catch (IntentSender.SendIntentException exp) {
-                        Log.e(HuaweiIapModule.TAG, exp.getMessage());
+                        Log.e(HuaweiIapModule.TAG, exp.toString());
                     }
                 } else {
                     Log.e(HuaweiIapModule.TAG, "intent is null");
@@ -65,7 +86,7 @@ public class PurchaseProducts implements TiActivityResultHandler {
         }).addOnFailureListener(new OnFailureListener() {
             @Override
             public void onFailure(Exception e) {
-                Log.e(HuaweiIapModule.TAG, e.getMessage());
+                Log.e(HuaweiIapModule.TAG, e.toString());
 
                 Toast.makeText(TiApplication.getAppCurrentActivity(), e.getMessage(), Toast.LENGTH_SHORT).show();
 
@@ -81,38 +102,27 @@ public class PurchaseProducts implements TiActivityResultHandler {
         });
     }
 
-    /**
-     * Create a PurchaseIntentReq instance.
-     * @param type In-app product type.
-     * @param productId ID of the in-app product to be paid.
-     *              The in-app product ID is the product ID you set during in-app product configuration in AppGallery Connect.
-     * @return PurchaseIntentReq
-     */
-    private PurchaseIntentReq createPurchaseIntentReq(int type, String productId) {
-        PurchaseIntentReq req = new PurchaseIntentReq();
-        req.setProductId(productId);
-        req.setPriceType(type);
-        req.setDeveloperPayload("test");
-        return req;
-    }
 
     @Override
     public void onResult(Activity activity, int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQ_CODE_BUY) {
+        if (resultCode == Activity.RESULT_CANCELED){
+            // "Result Cancelled"
+
+        } else if (REQ_CODE_BUY == requestCode && resultCode == Activity.RESULT_OK) {
             if (data == null) {
                 // "error"
                 return;
             }
-            
+
             PurchaseResultInfo purchaseResultInfo = Iap.getIapClient(TiApplication.getAppCurrentActivity()).parsePurchaseResultInfoFromIntent(data);
 
             switch(purchaseResultInfo.getReturnCode()) {
                 case OrderStatusCode.ORDER_STATE_SUCCESS:
                     // verify signature of payment results.
-                    boolean success = CipherUtil.doCheck(purchaseResultInfo.getInAppPurchaseData(), purchaseResultInfo.getInAppDataSignature(), Key.getPublicKey());
+                    boolean success = CipherUtil.doCheck(purchaseResultInfo.getInAppPurchaseData(), purchaseResultInfo.getInAppDataSignature());
                     if (success) {
                         // Call the consumeOwnedPurchase interface to consume it after successfully delivering the product to your user.
-                        consumeOwnedPurchase(this, purchaseResultInfo.getInAppPurchaseData());
+                        consumeOwnedPurchase(purchaseResultInfo.getInAppPurchaseData());
                     } else {
                         // "Pay successful,sign failed"
                     }
@@ -139,5 +149,52 @@ public class PurchaseProducts implements TiActivityResultHandler {
     @Override
     public void onError(Activity activity, int requestCode, Exception exc) {
 
+    }
+
+    /**
+     * Consume the unconsumed purchase with type 0 after successfully delivering the product, then the Huawei payment server will update the order status and the user can purchase the product again.
+     * @param inAppPurchaseData JSON string that contains purchase order details.
+     */
+    private void consumeOwnedPurchase(String inAppPurchaseData) {
+        Log.i(HuaweiIapModule.TAG, "call consumeOwnedPurchase");
+        IapClient mClient = Iap.getIapClient(TiApplication.getAppCurrentActivity());
+        Task<ConsumeOwnedPurchaseResult> task = mClient.consumeOwnedPurchase(createConsumeOwnedPurchaseReq(inAppPurchaseData));
+        task.addOnSuccessListener(new OnSuccessListener<ConsumeOwnedPurchaseResult>() {
+            @Override
+            public void onSuccess(ConsumeOwnedPurchaseResult result) {
+                // consumeOwnedPurchase success
+                // "Pay success, and the product has been delivered"
+            }
+        }).addOnFailureListener(new OnFailureListener() {
+            @Override
+            public void onFailure(Exception e) {
+                // failure
+                if (e instanceof IapApiException) {
+                    IapApiException apiException = (IapApiException)e;
+                    int returnCode = apiException.getStatusCode();
+                    Log.e(HuaweiIapModule.TAG, "consumeOwnedPurchase fail,returnCode: " + returnCode);
+                } else {
+                    // Other external errors
+                }
+            }
+        });
+    }
+
+    /**
+     * Create a ConsumeOwnedPurchaseReq instance.
+     * @param purchaseData JSON string that contains purchase order details.
+     * @return ConsumeOwnedPurchaseReq
+     */
+    private ConsumeOwnedPurchaseReq createConsumeOwnedPurchaseReq(String purchaseData) {
+        ConsumeOwnedPurchaseReq req = new ConsumeOwnedPurchaseReq();
+
+        // Parse purchaseToken from InAppPurchaseData in JSON format.
+        try {
+            InAppPurchaseData inAppPurchaseData = new InAppPurchaseData(purchaseData);
+            req.setPurchaseToken(inAppPurchaseData.getPurchaseToken());
+        } catch (JSONException e) {
+            Log.e(HuaweiIapModule.TAG, "createConsumeOwnedPurchaseReq JSONExeption");
+        }
+        return req;
     }
 }

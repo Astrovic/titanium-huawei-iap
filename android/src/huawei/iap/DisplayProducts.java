@@ -16,35 +16,25 @@ import org.appcelerator.kroll.KrollFunction;
 import org.appcelerator.titanium.TiApplication;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 
 public class DisplayProducts {
-    private ProductInfoReq createProductInfoReq() {
-        ProductInfoReq req = new ProductInfoReq();
-
-        // In-app product type contains:
-        // 0: consumable
-        // 1: non-consumable
-        // 2: auto-renewable subscription
-        req.setPriceType(IapClient.PriceType.IN_APP_NONCONSUMABLE);
+    public void fetchProductList(int priceType, Object[] items, KrollFunction callback) {
+        ProductInfoReq productInfoReq = new ProductInfoReq();
+        productInfoReq.setPriceType(priceType);
 
         ArrayList<String> productIds = new ArrayList<>();
+        for (Object item: items) {
+            productIds.add(String.valueOf(item));
+        }
 
-        // Pass in the item_productId list of products to be queried.
-        // The product ID is the same as that set by a developer when configuring product information in AppGallery Connect.
-        productIds.add("CProduct1");
+        productInfoReq.setProductIds(productIds);
 
-        req.setProductIds(productIds);
-
-        return req;
-    }
-
-    private void loadProduct(KrollFunction callback) {
         // obtain in-app product details configured in AppGallery Connect, and then show the products
         IapClient iapClient = Iap.getIapClient(TiApplication.getAppRootOrCurrentActivity());
-
-        Task<ProductInfoResult> task = iapClient.obtainProductInfo(createProductInfoReq());
+        Task<ProductInfoResult> task = iapClient.obtainProductInfo(productInfoReq);
 
         task.addOnSuccessListener(new OnSuccessListener<ProductInfoResult>() {
             @Override

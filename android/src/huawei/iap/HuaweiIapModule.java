@@ -8,11 +8,18 @@
  */
 package huawei.iap;
 
+import android.util.Log;
+
 import com.huawei.hms.iap.IapClient;
 
+import org.appcelerator.kroll.KrollDict;
+import org.appcelerator.kroll.KrollFunction;
 import org.appcelerator.kroll.KrollModule;
 import org.appcelerator.kroll.annotations.Kroll;
 import org.appcelerator.titanium.TiApplication;
+import org.appcelerator.titanium.TiC;
+
+import huawei.iap.helper.Defaults;
 
 
 @SuppressWarnings("ALL")
@@ -22,6 +29,10 @@ public class HuaweiIapModule extends KrollModule {
 
 	public static String API_KEY = "";
 
+	// In-app product type contains:
+	// 0: consumable
+	// 1: non-consumable
+	// 2: auto-renewable subscription
 	@Kroll.constant public static final int PRICE_TYPE_CONSUMABLE = IapClient.PriceType.IN_APP_CONSUMABLE;
 	@Kroll.constant public static final int PRICE_TYPE_NON_CONSUMABLE = IapClient.PriceType.IN_APP_NONCONSUMABLE;
 	@Kroll.constant public static final int PRICE_TYPE_SUBSCRIPTION = IapClient.PriceType.IN_APP_SUBSCRIPTION;
@@ -45,8 +56,38 @@ public class HuaweiIapModule extends KrollModule {
 	}
 
 	@Kroll.method
-	public void purchaseProduct() {
+	public void getItemDetails(KrollDict params) {
+		// validate all passed parameters
+		if (params == null) {
+			Log.w(TAG, "parameters not available");
+			return;
+		}
 
+		if (!params.containsKeyAndNotNull(Defaults.PROPERTY_CALLBACK)) {
+			Log.w(TAG, "callback not available");
+			return;
+		}
+
+		if (!params.containsKeyAndNotNull(Defaults.PROPERTY_PRICE_TYPE)) {
+			Log.w(TAG, "price-type not available");
+			return;
+		}
+
+		if (!params.containsKeyAndNotNull(Defaults.PROPERTY_ITEMS)) {
+			Log.w(TAG, "item list not available");
+			return;
+		}
+
+		Object callback = params.get(Defaults.PROPERTY_CALLBACK);
+		int priceType = (int) params.get(Defaults.PROPERTY_PRICE_TYPE);
+		Object[] items = (Object[]) params.get(Defaults.PROPERTY_ITEMS);
+
+		if (callback instanceof KrollFunction == false) {
+			Log.w(TAG, "callback not available");
+			return;
+		}
+
+		new DisplayProducts().fetchProductList(priceType, items, (KrollFunction) callback);
 	}
 }
 
