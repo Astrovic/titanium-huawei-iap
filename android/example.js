@@ -59,6 +59,7 @@ function buyItem() {
     HMS_IAP.purchaseItem({
         priceType: PRICE_TYPE_NON_CONSUMABLE,
         productId: '123', // your product item-id to buy
+        developerPayload: 'optional: developer message for this purchase',
         callback: function (e) {
             // success: true/false
             // message: failure message when success is false
