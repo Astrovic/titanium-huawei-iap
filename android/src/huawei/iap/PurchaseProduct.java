@@ -108,15 +108,10 @@ public class PurchaseProduct implements TiActivityResultHandler {
                     TiActivitySupport tiActivitySupport = ((TiActivitySupport) TiApplication.getAppCurrentActivity());
 
                     if (pendingIntent != null) {
-                        Log.i(TAG, "<<< launching from pendingIntent >>>");
                         tiActivitySupport.launchIntentSenderForResult(pendingIntent.getIntentSender(), REQ_CODE_BUY, (Intent)null, 0, 0, 0, null, this);
-                        Log.i(TAG, "<<< launching from pendingIntent done >>>");
                     } else if (intent != null) {
-                        Log.i(TAG, "<<< launching from intent >>>");
                         tiActivitySupport.launchActivityForResult(intent, REQ_CODE_BUY, this);
-                        Log.i(TAG, "<<< launching from intent done >>>");
                     } else {
-                        Log.i(TAG, "launching normally from IAP SDK");
                         status.startResolutionForResult(TiApplication.getAppCurrentActivity(), REQ_CODE_BUY);
                     }
 
@@ -133,21 +128,20 @@ public class PurchaseProduct implements TiActivityResultHandler {
     @Override
     public void onResult(Activity activity, int requestCode, int resultCode, Intent data) {
         if (resultCode == Activity.RESULT_CANCELED){
-            Log.i(TAG, "onResult: result cancelled");
-            onFail("onResult: result cancelled");
+            onFail("result cancelled");
             return;
         }
 
         if (REQ_CODE_BUY == requestCode && resultCode == Activity.RESULT_OK) {
             if (data == null) {
-                Log.i(TAG, "onResult: data null");
-                onFail("onResult: data null");
+                onFail("result data null");
                 return;
             }
 
             PurchaseResultInfo purchaseResultInfo = Iap.getIapClient(TiApplication.getAppCurrentActivity()).parsePurchaseResultInfoFromIntent(data);
+            final int returnCode = purchaseResultInfo.getReturnCode();
 
-            switch(purchaseResultInfo.getReturnCode()) {
+            switch(returnCode) {
                 case OrderStatusCode.ORDER_STATE_SUCCESS:
                     String inAppPurchaseData = purchaseResultInfo.getInAppPurchaseData();
                     String inAppPurchaseDataSignature = purchaseResultInfo.getInAppDataSignature();
@@ -156,41 +150,34 @@ public class PurchaseProduct implements TiActivityResultHandler {
                     boolean success = CipherUtil.doCheck(inAppPurchaseData, inAppPurchaseDataSignature);
 
                     if (success) {
-                        Log.i(TAG, "Payment successful and product delivered");
-                        onSuccess("Payment successful and product delivered", HuaweiIapModule.CODE_PAYMENT_SUCCESS);
+                        onSuccess("payment successful and product delivered", HuaweiIapModule.CODE_PAYMENT_SUCCESS);
                     } else {
-                        Log.i(TAG, "Payment successful but signature failed");
-                        onSuccess("Payment successful but signature failed", HuaweiIapModule.CODE_PAYMENT_SUCCESS_SIGNATURE_FAILED);
+                        onSuccess("payment successful but signature failed", HuaweiIapModule.CODE_PAYMENT_SUCCESS_SIGNATURE_FAILED);
                     }
 
                     break;
 
                 case OrderStatusCode.ORDER_STATE_CANCEL:
-                    Log.i(TAG, "onResult: user cancelled the payment");
-                    onFail("onResult: user cancelled the payment");
+                    onFail("user cancelled the payment");
                     break;
 
                 case OrderStatusCode.ORDER_PRODUCT_OWNED:
-                    Log.i(TAG, "You already owned the product");
-                    onSuccess("You already owned the product", HuaweiIapModule.CODE_OWNED_PRODUCT);
+                    onSuccess("you already owned the product", HuaweiIapModule.CODE_OWNED_PRODUCT);
                     break;
 
                 default:
-                    Log.i(TAG, "onResult: payment failed");
-                    onFail("onResult: payment failed");
+                    onFail("payment failed: " + StatusHandler.getErrorMessage(returnCode) );
                     break;
             }
         } else {
-            Log.i(TAG, "onResult: requestCode or resultCode null");
-            onFail("onResult: requestCode or resultCode null");
+            onFail("requestCode or resultCode null");
         }
     }
 
     @Override
     public void onError(Activity activity, int requestCode, Exception exc) {
         if (REQ_CODE_BUY == requestCode) {
-            Log.i(TAG, "onError: unknown error");
-            onFail("onError: unknown error");
+            onFail("unknown error");
         }
     }
 }

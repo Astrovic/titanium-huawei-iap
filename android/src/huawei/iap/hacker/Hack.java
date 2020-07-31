@@ -18,10 +18,8 @@ public class Hack {
                 try {
                     field.setAccessible(true);
                     pendingIntent = (PendingIntent) field.get(status);
-                    Log.i("Hack", "<<< PendingIntent >>> ");
                 }  catch (Exception e) {
                     e.printStackTrace();
-                    Log.i("Hack", "<<< PendingIntent failed >>> : " + e.getLocalizedMessage());
                 }
                 break;
             }
@@ -39,10 +37,8 @@ public class Hack {
                 try {
                     field.setAccessible(true);
                     intent = (Intent) field.get(status);
-                    Log.i("Hack", "<<< Intent >>> ");
                 }  catch (Exception e) {
                     e.printStackTrace();
-                    Log.i("Hack", "<<< Intent failed >>> : " + e.getLocalizedMessage());
                 }
                 break;
             }
