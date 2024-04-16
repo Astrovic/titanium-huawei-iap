@@ -18,5 +18,5 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.huawei.hms:iap:6.4.0.301'
+    implementation 'com.huawei.hms:iap:6.13.0.300'
 }
